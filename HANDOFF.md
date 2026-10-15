@@ -1,11 +1,26 @@
-# Next session context
+# APEX Pocket — Windows continuation
 
-User wants a professionally finished kart racer on an HP Windows laptop, controlled by Android phones, with broader phone/laptop support where feasible. Two tracks, three car classes, solo and up to four local players, split-screen, driving/drifting without weapons. Phone landscape controls: red left half = brake, green right half = gas, tilt steering. QR pairing should be the easiest path. User authorized a public HTTPS link, but later asked to leave GitHub for now and finish the local project to continue on their PC.
+Repository cloned locally on 2026-10-15. Node v22.18.0 and Git are installed. The user authorized finishing the game, browser testing, HTTPS phone tilt, multiplayer up to four players, and pushing changes to BaslielMesfin/Wii-phone-games.
 
-The implementation is complete enough for PC browser verification, but has NOT been run in a browser here. Do not describe it as a tested release. `npm test` passes 15 simulation and compatibility tests; `npm run check` passes. Browser and local server could not start under workspace restrictions. Do not repeatedly issue network escalation requests; several previous attempts stalled the session.
+## Implemented and checked
 
-No npm dependencies are required. Three.js r170 and fonts were acquired through the connected GitHub read tools and vendored. `index.html` maps `peerjs` to jsDelivr (internet required for phone pairing) and `qrcode` to a local adapter. Start with `START-GAME.bat` or `node server.mjs`.
+- Direct same-origin WebSocket pairing through the Node server, with vendored MIT ws 8.22.0. No npm installation or external signaling is required for local play. Static builds retain PeerJS fallback via lazy import.
+- Up to four phones, or keyboard plus three phones. Host validates input and profiles, retains reconnect identity, and brakes stale/disconnected controllers. Relay limits message size and peers, prevents cross-room forwarding, validates Origin, and heartbeats dead sockets.
+- START-PHONE-HTTPS.bat invokes scripts/https.mjs. It uses the installed Windows SSH client and localhost.run to create a temporary trusted public HTTPS address. No binary download or local CA installation. It starts a loopback-only server on port 4174 and prints/opens the public URL. Ctrl+C shuts down both processes. Host keys are isolated in ignored .tools/known_hosts. It does not use the user's SSH keys or config.
+- Motion math extracted and tested for both landscape orientations, calibration, inversion, invalid sensor samples, and full-steering limits. Missing motion data stops acceleration. Settings/blur/visibility release controls. Reconnect resets ready UI; live telemetry restores connection status.
+- Fixed negative frame delta briefly displaying a 4-second countdown; stale connections cannot change the reconnected driver's profile; old connection timers cannot close a replacement connection. Simultaneous touch arrows retain the still-held direction.
+- Server now only serves browser assets and its endpoints. Git metadata, tooling, keys, and source/server scripts are not publicly served.
 
-The user has now authorized pushing to the public repository https://github.com/BaslielMesfin/Wii-phone-games. A blank Sites project was registered earlier: its ID is retained only in the workspace `.openai/hosting.json`; no game version was deployed. No live game link should be claimed. The ZIP intentionally excludes this workspace publishing identity. User now wants to continue locally on Windows. Opening this chat on a PC did not change its existing cloud execution workspace. Clone the repository and open a local task in that folder. First priority on PC is visual/browser QA, then trusted HTTPS and actual Android motion + 1–4 phone pairing tests. See README for details.
+19 tests pass; npm run check passes. Tests include all six track/car combinations finishing three legitimate laps, relay four-phone capacity/fifth rejection, routing isolation, Origin rejection, reconnect identity, stale-input braking, and tilt math.
 
-Potential review points: motion axis direction depends on phone orientation; invert and calibration are provided but require physical testing. PeerJS's public signaling broker is an external dependency without a guaranteed service level; no TURN relay is configured. 3D performance under four cameras is unmeasured. The AI currently drives clean racing lines and may need difficulty tuning. Best laps are stored in localStorage; leaderboard UI shows each race's best lap.
+## Browser evidence
+
+The Codex in-app browser rendered both Coastal Circuit and Neon Harbor with Club, Zip, and GT in four-camera split-screen. Four independent controller tabs joined/readying on the LAN endpoint, car selections reached the lobby, and pedal input affected speed telemetry. Keyboard acceleration reached 28 km/h, braking returned to 0, pause and return-to-lobby worked, and tracks switched. These are simulated controllers in browser tabs, not four physical phones. Background tab throttling can mark simulated controllers stale, as expected.
+
+The live HTTPS game rendered and accepted a browser controller. A separate public WSS probe then verified four controllers sending inputs and receiving telemetry through the tunnel. Launcher now forces IPv4; initial attempts on this connection dropped/timed out, so do not promise uninterrupted external service availability. Public addresses are ephemeral; don't reuse old QA URLs.
+
+## Remaining device gate
+
+Do not call this verified on Android/iPhone without actual devices. User must check sensor direction on their phone, both landscape orientations, browser motion permission, simultaneous finger pedals, wake lock behavior, and sustained four-phone frame rate/latency. Touch steering fallback is available. AI difficulty is functional but not extensively player-balanced.
+
+HTTPS service URLs are temporary. Open the current launcher's HTTPS URL on the laptop before creating the room so the QR uses that same origin. Phones must use the same server URL; room codes are scoped to a server. No permanent deployment is claimed. If SSH is blocked, try another network or trusted manual TLS. Static hosting uses a different PeerJS path and was not revalidated here.

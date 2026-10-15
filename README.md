@@ -1,100 +1,88 @@
 # APEX / POCKET
 
-A local-party kart racer: the laptop shows the race, and up to four phones act as controllers. This is an implementation checkpoint to continue on your Windows PC, not a browser-verified final release.
+A split-screen kart racer: the laptop displays the race and up to four phones become steering wheels. Two circuits, three car classes, three laps, drifting and boosts. No weapons, accounts, or npm installation.
 
-## Start on Windows
+## Play on Windows
 
-1. Install **Node.js 20 or newer** from https://nodejs.org if you do not already have it.
-2. Extract the entire project ZIP into a folder. Do not open `index.html` directly.
-3. Double-click **START-GAME.bat**. Keep the terminal window open.
-4. The launcher opens **http://localhost:4173**. If the browser does not open automatically, open that address yourself.
-5. Click **Solo test drive**, choose a track and car, then **Lights out. Let’s go.**
+Install **Node.js 20 or newer**, clone or extract the whole project, and choose a launcher:
 
-No `npm install` is needed. Three.js, QR generation, fonts, and all game artwork are included. Solo keyboard play does not require internet access.
+- **START-GAME.bat** — offline keyboard racing, or phone touch controls over local Wi-Fi.
+- **START-PHONE-HTTPS.bat** — phone tilt controls through a temporary trusted HTTPS address. Requires internet and Windows OpenSSH Client, included on most Windows PCs. No extra download or account is required.
 
-Keyboard: **W / Up** = gas; **S / Down / Space** = brake; **A D / Left Right** = steer; **R** = reset car; **Esc** = pause. Hold gas and brake while turning to drift; release the brake to convert a charged drift into a boost. Drive over the colored strips for a track boost.
+Keep the launcher's terminal open. Closing it ends the game/link. Do not double-click `index.html`.
 
-On macOS or Linux, use `node server.mjs` and open http://localhost:4173. To use another port: `node server.mjs --port 4174`.
+Keyboard: **W / Up** gas; **S / Down / Space** brake; **A D / Left Right** steer; **R** reset; **Esc** pause. Hold gas and brake while turning to charge a drift, then release brake to boost. Colored strips on the circuit also boost your car.
 
-## Included
+## Phone tilt: recommended setup
 
-- Two closed-loop 3D circuits: **Coastal Circuit** and **Neon Harbor**.
-- Three procedural car models and handling classes: **Club**, **Zip**, and **GT**.
-- Three-lap races, AI rivals, countdown, positions, speed display, lap gates, collisions, track boundaries, and reset.
-- Drift charging, earned boosts, and track boost strips.
-- Split-screen layouts for one, two, three, or four human drivers. Three players get a fourth-panel circuit overview.
-- Track selection, car selection, ready checks, room capacity checks, pause, results, rematches, sound toggle, and local best-lap storage.
-- Phone pairing code, QR invite, landscape red-left brake / green-right gas, held multi-touch pedals, tilt calibration, sensitivity, invert steering, touch-steering fallback, reconnect logic, and stale-input braking.
-- A dependency-free Node static server and Windows launcher.
+1. Double-click **START-PHONE-HTTPS.bat**. The laptop browser opens the printed HTTPS address. Use that address rather than `localhost` for this session.
+2. Choose **Create a race**, then scan the lobby QR on each phone. Each phone must open the same address/server as the laptop; room codes identify a room on that server.
+3. Enter a driver name, rotate to landscape, and choose Club, Zip, or GT.
+4. Tap **Enable tilt steering** and grant motion permission if requested. Hold the phone comfortably and tap **Calibrate**. Tilt both ways to check the gauge. Adjust sensitivity or invert if needed.
+5. Tap **I'm ready** on every phone, then start the race on the laptop.
 
-## Phone multiplayer: code included, real-device verification pending
+Red left half = brake; green right half = gas. Hold both while steering to drift. **Touch arrows** remain available when motion permission is unavailable. Keep the laptop tab visible and every phone unlocked. Opening controller settings, losing focus, stale motion, or stale inputs releases the accelerator; disconnected controllers brake on the host.
 
-**Internet is required for pairing** through the public PeerJS signaling service. The PeerJS client is loaded from a pinned CDN URL in `index.html`. When the network allows it, phone inputs travel directly to the laptop over WebRTC data channels. There is no dedicated game backend or bundled TURN relay; some isolated Wi-Fi networks, VPNs, or firewall configurations may prevent pairing. All game simulation runs on the laptop.
+Four phones can race together. To mix keyboard and phones, enable the laptop driver and connect up to three phones. A fifth controller is rejected. Reconnecting the same phone retains its seat; after reconnecting in the lobby, mark it ready again. Remove disconnected seats using the × beside their names.
 
-### Try touch steering on your local Wi-Fi
+The HTTPS launcher uses an outbound SSH connection to [localhost.run](https://localhost.run/docs/http-tunnels/), which supplies TLS certificates. It starts a separate game server on `127.0.0.1:4174`, opens a temporary public address, and routes controller WebSockets through that address. It does not change router settings or install certificates. Anyone who has the invite can join; room codes are invitations, not an authentication system. Stop the launcher with Ctrl+C when finished. Free addresses expire/change and the service has no guaranteed availability. This is a play-session link, not permanent hosting.
 
-1. Put your laptop and phones on the same Wi-Fi. Avoid guest networks with client isolation.
-2. Run `START-GAME.bat`. If Windows Firewall prompts, allow Node on your **private network**.
-3. On the laptop, choose **Create a race**. Wait for the pairing service to open a room.
-4. Scan the QR code with each phone camera. The local server supplies your LAN address automatically; the QR must not point to `localhost` on a phone. If your laptop has several network adapters, open the game on the laptop using the correct `Phone / LAN` address printed by the server before creating the QR.
-5. Enter a name, rotate to landscape, choose **Touch arrows (fallback)**, choose a car, and tap **I’m ready**.
-6. Start the race on the laptop. Disable the laptop keyboard driver if you want all four slots available to phones. One keyboard driver plus three phones is also supported.
+If `ssh.exe` is missing, install **OpenSSH Client** in Windows Optional features. If your network blocks SSH, use another network or provide trusted TLS certificates as described below. If port 4174 is occupied, set `APEX_HTTPS_PORT` before starting `node scripts/https.mjs`.
 
-### Tilt steering needs trusted HTTPS
+## Local Wi-Fi without internet
 
-Browsers block motion sensors on an ordinary `http://192.168...` phone page. This version detects insecure connections and selects touch steering. A trusted HTTPS deployment or a trusted local HTTPS setup is the next PC task before checking tilt controls.
+1. Run **START-GAME.bat** and choose **Create a race**.
+2. Put laptop and phones on the same Wi-Fi. Avoid guest networks with client isolation. If Windows Firewall asks, allow Node on your private network.
+3. Scan the QR. It uses the laptop's LAN address, not the phone's `localhost`.
+4. Use **Touch arrows** for steering. Ordinary `http://192.168...` addresses cannot access phone motion sensors.
 
-The server accepts certificates you already have:
+If multiple network adapters are present, open the correct **Phone / LAN** address printed in the terminal on the laptop before creating the room. Local multiplayer connects directly through the included WebSocket relay; it does not need PeerJS signaling, internet, STUN, or TURN.
 
-```sh
-node server.mjs --cert path/to/cert.pem --key path/to/key.pem
-```
+## Circuits and cars
 
-The certificate must cover the address used by the phone and be trusted on that phone. A random self-signed certificate is not a reliable cross-device solution. Do not commit private keys. Alternatively, host the static project on an HTTPS static hosting service.
+| Circuit | Character |
+| --- | --- |
+| Coastal Circuit | Wide seaside bends; beginner friendly |
+| Neon Harbor | Dockside hairpins and neon gates |
 
-Once HTTPS is working: enable motion permission, hold the phone in a comfortable landscape position, tap **Calibrate**, and check the steering gauge. Use **Invert steering** if your phone's orientation produces the opposite direction. Some browsers need motion permission in their site settings. Keep phones unlocked and the laptop tab visible.
+| Car | Handling |
+| --- | --- |
+| Club | Balanced speed, acceleration, and grip |
+| Zip | Strong acceleration and cornering |
+| GT | Highest top speed |
 
-## Validation completed here
+Includes AI rivals, ordered lap gates, collisions, boundary containment, car reset, countdown, pause, results, rematch, best laps, sound controls, QR invitations, and 1–4 camera layouts. Three drivers get a circuit overview in the fourth panel.
 
-Run these without installing dependencies:
+## Validation
 
 ```sh
 npm test
 npm run check
 ```
 
-Fifteen tests pass. They cover all six track/car combinations completing three valid laps under AI control, closed circuits, 3D car construction, braking, drift boost charging and release, checkpoint enforcement, track boundaries/reset, collisions, and results ordering. All application JavaScript passes syntax checks.
+19 automated tests cover all six track/car combinations completing three valid laps, car construction, braking, drift boost, lap gates, boundaries/reset, collisions, standings, HTTP-safe reconnect tokens, tilt math in both landscape orientations, calibration/inversion, four-controller relay capacity, message isolation, Origin checks, reconnect identity, and stale-input braking.
 
-**Browser rendering, real-phone motion, live WebRTC pairing, split-screen performance, and cross-browser/device compatibility have not been verified.** This workspace blocked local server binding and Chromium launch. Passing simulation tests does not establish that these browser/device paths work correctly.
+On Windows, browser inspection confirmed both circuits and all three models in four-player split-screen, four independent controller pages joining/readying, phone pedal input reaching the host, keyboard acceleration/braking, pause, and changing tracks. Browser controllers simulate phones; they are not four physical devices.
 
-## Continue on the PC
+The HTTPS launcher served the game and accepted a browser controller. A separate live WSS check sent inputs from four controllers through the public tunnel and received telemetry back on all four. The launcher uses IPv4; earlier connection attempts on this network dropped/timed out. Internet and tunnel service stability remain external dependencies.
 
-1. Run the keyboard game and inspect both circuits, car models, UI sizing, and frame rate.
-2. Check race countdown, pause/resume, results/rematch, and changing tracks repeatedly.
-3. Verify one phone over LAN touch steering, then two, three, and four players.
-4. Enable trusted HTTPS and check Android motion direction, calibration, pedal multi-touch, and disconnect/reconnect braking.
-5. Check an iPhone, both landscape orientations, permission refusal, and screen wake behavior.
-6. Tune handling and AI difficulty based on actual driving feedback. Current AI is intentionally straightforward; it is not difficulty-balanced.
-7. Publish the HTTPS version when ready. The source repository is https://github.com/BaslielMesfin/Wii-phone-games.
+**Physical Android/iPhone sensor direction, permission prompts, simultaneous finger multi-touch, screen wake behavior, and sustained four-phone performance still need a real-device session.** Mathematical/simulated checks do not certify those device-specific behaviors. AI difficulty has not been balanced through extended player testing.
 
-## Project layout
+## Command line / certificates
 
-`src/host.js` owns menus, race state, split-screen HUD, and results. `src/world.js` builds the 3D scenes, tracks, cars, and cameras. `src/physics.js` handles simulation and AI. `src/network.js` handles room and controller connections. `src/phone.js` implements the phone controls. `src/style.css` contains desktop and phone layouts. `vendor/` includes the local engine, QR library, fonts, and their licenses.
-
-`npm run package` builds `dist/` for static hosting. The output excludes tests, server code, and local publishing metadata. Any static HTTPS host can serve it. Keep the relative directory structure intact.
-
-Third-party licenses are in `vendor/`. PeerJS is loaded from jsDelivr and distributed under its upstream MIT license. No analytics, accounts, or payment systems are included.
-
-## Open this project locally in Codex
-
-This chat was operating in a Linux cloud workspace. Opening the chat on a Windows PC does not move its files or execution environment onto that PC.
-
-In PowerShell on your PC:
-
-```powershell
-git clone https://github.com/BaslielMesfin/Wii-phone-games.git
-cd Wii-phone-games
+```sh
 node server.mjs
+node server.mjs --port 4175
+node scripts/https.mjs
+node server.mjs --cert path/to/cert.pem --key path/to/key.pem
 ```
 
-Open the cloned folder as a local project in the Codex desktop app or VS Code with the Codex extension, and start a local task there. If you use Codex CLI, run `codex` from that folder. Ask it to read `HANDOFF.md`, start the game, verify both tracks in a browser, and finish the phone pairing/HTTPS/device checks. Node.js 20 or newer is required; npm dependency installation is not.
+Certificates must cover the address used by phones and be trusted on them. Do not commit keys. The server only serves browser assets and its config/relay endpoints; repository files and `.tools` are excluded from public HTTP access.
+
+## Source and packaging
+
+`src/host.js` controls menus, races, HUDs and results. `world.js` builds scenes and cameras. `physics.js` owns simulation and AI. `network.js` owns driver sessions; `lan.js` adapts the local WebSocket transport; `scripts/relay.mjs` forwards room messages. `phone.js` handles pedals and permissions; `motion.js` contains testable tilt math.
+
+`npm run package` produces `dist/` for static hosting. Static hosting retains the earlier PeerJS transport and needs internet/CDN signaling; it does not include the local relay or HTTPS launcher. The recommended PC setup uses the Node server. Three.js, QR generation, fonts, and the ws 8.22.0 server library are vendored with their licenses. PeerJS is loaded only for static-host fallback. The Windows SSH client and localhost.run are external runtime/service dependencies for the HTTPS launcher.
+
+Source: https://github.com/BaslielMesfin/Wii-phone-games
