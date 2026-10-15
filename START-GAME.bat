@@ -1,0 +1,11 @@
+@echo off
+cd /d "%~dp0"
+where node >nul 2>nul
+if errorlevel 1 (
+  echo Install Node.js 20 or newer from https://nodejs.org then run this file again.
+  pause
+  exit /b 1
+)
+echo Starting APEX Pocket. Keep this window open while playing.
+node server.mjs --open
+pause

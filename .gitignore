@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.zip
+*.tar.gz
+.env*
+*.pem
+*.key
+.DS_Store
+test-results/
+playwright-report/
+screenshots/

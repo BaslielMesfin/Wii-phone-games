@@ -1,0 +1,14 @@
+{
+  "name": "apex-pocket",
+  "version": "1.0.0",
+  "description": "Phone-powered split-screen kart racing for one to four players",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node tests/run.js",
+    "check": "node scripts/check.mjs",
+    "package": "node scripts/package.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "type": "module"
+}
