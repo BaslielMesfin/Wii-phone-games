@@ -64,13 +64,13 @@ npm test
 npm run check
 ```
 
-29 automated tests cover all six track/car combinations completing three valid laps, car construction, braking, drift boost, lap gates, boundaries/reset, collisions, standings, HTTP-safe reconnect tokens, tilt math in both landscape orientations and different grip inclinations, calibration/inversion, browser sensor getters, independent pedal pointers, countdown holds, four-controller relay capacity, message isolation, Origin checks, reconnect identity, stale-input braking, and tunnel address renewal/chunk parsing.
+31 automated tests cover all six track/car combinations completing three valid laps, car construction, braking, drift boost, lap gates, boundaries/reset, collisions, standings, HTTP-safe reconnect tokens, tilt math in both landscape orientations and different grip inclinations, calibration/inversion, browser sensor getters, independent pedal pointers, countdown holds, steering correction/counter-steering latency and center-noise rejection, four-controller relay capacity, message isolation, Origin checks, reconnect identity, stale-input braking, and tunnel address renewal/chunk parsing.
 
 On Windows, browser inspection confirmed both circuits and all three models in four-player split-screen, four independent controller pages joining/readying, phone pedal input reaching the host, keyboard acceleration/braking, pause, and changing tracks. Browser controllers simulate phones; they are not four physical devices.
 
 The HTTPS launcher served the game and accepted a browser controller. A separate live WSS check sent inputs from four controllers through the public tunnel and received telemetry back on all four. The launcher uses IPv4; earlier connection attempts on this network dropped/timed out. Internet and tunnel service stability remain external dependencies.
 
-**Physical Android/iPhone sensor direction, permission prompts, simultaneous finger multi-touch, screen wake behavior, and sustained four-phone performance still need a real-device session.** Mathematical/simulated checks do not certify those device-specific behaviors. AI difficulty has not been balanced through extended player testing.
+The user confirmed corrected tilt direction on a physical phone in landscape. Steering response has since been tuned: one short sensor filter, 16 ms input sends, and faster human steering response. A 60 Hz simulation reaches 80% of a turn in about 67 ms before network/rendering delay. **The updated feel, the other landscape orientation, additional Android/iPhone permission behavior, simultaneous finger multi-touch, screen wake behavior, and sustained four-phone performance still need physical verification.** Mathematical/simulated checks do not certify those device-specific behaviors. AI difficulty has not been balanced through extended player testing.
 
 ## Command line / certificates
 

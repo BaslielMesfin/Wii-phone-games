@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {wheelAngle,wheelSteer,WheelMotion} from '../src/motion.js';
 import {HeldControls,drivingInput} from '../src/controls.js';
+import {CARS,createRacer,stepRacer} from '../src/physics.js';
+import {makeTrack} from '../src/world.js';
 const rad=n=>n*Math.PI/180;
 // Rotate an upright screen's gravity into device axes, then incline the screen.
 function gravity(turn,pitch,orientation){
@@ -58,6 +60,32 @@ test('Real browser sensor axes are prototype getters, not enumerable own propert
  const wheel=new WheelMotion();assert.ok(wheel.sample(sample,90,100));assert.ok(wheel.fresh(100));
  assert.ok(Math.abs(wheel.raw-30)<.01);assert.ok(wheel.calibrate(100));assert.equal(wheel.value(30,false,100),0);
  wheel.sample(sample,90,116);assert.ok(wheel.fresh(116));assert.ok(Number.isFinite(wheel.gravity.x));
+});
+test('Human steering reaches 80% of a wheel correction within 100 ms, including counter-steering',()=>{
+ const dt=1/60,track=makeTrack('coast');
+ for(const car of CARS)for(const orientation of [90,270]){
+  const wheel=new WheelMotion(),r=createRacer(track,car.id,0,'Response test',true);
+  wheel.sample(gravity(0,60,orientation),orientation,0);
+  let now=0;
+  for(const turn of [20,-20,0]){
+   const start=r.steering,target=wheelSteer(turn,0,30);
+   let reached=null;
+   for(let frame=1;frame<=30;frame++){
+    now+=dt*1000;wheel.sample(gravity(turn,60,orientation),orientation,now);
+    stepRacer(r,{steer:wheel.value(30,false,now)},dt,track,now/1000);
+    if(reached===null&&Math.abs(target-r.steering)<=Math.abs(target-start)*.2)reached=frame*dt*1000;
+   }
+   assert.ok(reached<=100,`${car.id}/${orientation}/${turn}: ${reached} ms`);
+   assert.ok(Math.abs(r.steering-target)<.001);
+  }
+ }
+});
+test('Small alternating sensor noise stays inside the steering dead zone',()=>{
+ const wheel=new WheelMotion();wheel.sample(gravity(0,45,90),90,0);
+ for(let i=1;i<=120;i++){
+  wheel.sample(gravity(i%2?.8:-.8,45,90),90,i*1000/60);
+  assert.equal(Math.abs(wheel.value(30,false,i*1000/60)),0);
+ }
 });
 test('Independent fingers preserve gas/brake through release, cancel, and duplicate lost-capture events',()=>{
  const held=new HeldControls();held.press('gas',11);held.press('brake',22);

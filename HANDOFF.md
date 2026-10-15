@@ -11,7 +11,7 @@ Repository cloned locally on 2026-10-15. Node v22.18.0 and Git are installed. Th
 - Fixed negative frame delta briefly displaying a 4-second countdown; stale connections cannot change the reconnected driver's profile; old connection timers cannot close a replacement connection. Simultaneous touch arrows retain the still-held direction.
 - Server now only serves browser assets and its endpoints. Git metadata, tooling, keys, and source/server scripts are not publicly served.
 
-29 tests pass; npm run check passes. Tests include all six track/car combinations finishing three legitimate laps, relay four-phone capacity/fifth rejection, routing isolation, Origin rejection, reconnect identity, stale-input braking, tilt math at different grip inclinations, real browser sensor getters, independent held pedal state, and tunnel renewal/chunk parsing.
+31 tests pass; npm run check passes. Tests include all six track/car combinations finishing three legitimate laps, relay four-phone capacity/fifth rejection, routing isolation, Origin rejection, reconnect identity, stale-input braking, tilt math at different grip inclinations, real browser sensor getters, independent held pedal state, and tunnel renewal/chunk parsing.
 
 ## Landscape correction from physical-phone feedback
 
@@ -19,7 +19,13 @@ The user reported that steering improved when holding the phone in portrait. The
 
 Held pedal pointers are now separate from transmitted race input, so gas held through countdown survives until GO. Multi-pointer release/cancel and opposing arrows are independently tested. The controller settings now include a live steering preview. A hidden host DOM output, controller-monitor, receives sanitized controller diagnostics for checking actual phone axes, calibration, and held pedals in the lobby without driving the car.
 
-Browser check: gas held from START IN 3 through GO accelerated to 31 km/h; brake returned to 0; missing motion prevents readying until touch fallback is selected. The user's real phone reported landscape=true, orientation=90. Final physical feedback on the corrected wheel calculation and simultaneous pedals is still pending; do not call that gate passed from automated tests alone.
+Browser check: gas held from START IN 3 through GO accelerated to 31 km/h; brake returned to 0; missing motion prevents readying until touch fallback is selected. The user's real phone reported landscape=true, orientation=90. The user confirmed the corrected landscape tilt moves correctly and reported that race steering feels delayed. Simultaneous physical pedals and the opposite landscape grip are still unverified.
+
+## Steering response tuning
+
+Removed the second phone steering low-pass filter, shortened the gravity filter from 45 to 18 ms, sent inputs every 16 ms instead of 33 ms, and sped human steering interpolation from 10 to 30 per second. AI handling, maximum steering range, and drift/traction rules are unchanged. At 60 Hz the sensor-to-car steering-value simulation reaches 80% of a 20-degree turn in about 67 ms; regression checks cover initial turns, counter-steering, recentering, all cars, both landscapes, and center noise. This excludes network, rendering, and chassis travel response and is not a physical end-to-end latency measurement.
+
+Controller diagnostics version 4 adds a two-second ping/pong round-trip sample, roundTripMs, visible in controller-monitor, so remaining phone/tunnel delay can be measured independently. The user still needs to compare the new feel on their phone.
 
 ## Phone link recovery
 
@@ -33,6 +39,6 @@ The live HTTPS game rendered and accepted a browser controller. A separate publi
 
 ## Remaining device gate
 
-Do not call this verified on Android/iPhone without actual devices. User must check sensor direction on their phone, both landscape orientations, browser motion permission, simultaneous finger pedals, wake lock behavior, and sustained four-phone frame rate/latency. Touch steering fallback is available. AI difficulty is functional but not extensively player-balanced.
+Do not call this verified on Android/iPhone without actual devices. The user has confirmed usable landscape sensor direction on their phone. Remaining checks include the other landscape orientation, additional device/browser permission behavior, simultaneous finger pedals, wake lock behavior, and sustained four-phone frame rate/latency. Touch steering fallback is available. AI difficulty is functional but not extensively player-balanced.
 
 HTTPS service URLs are temporary. Open the current launcher's HTTPS URL on the laptop before creating the room so the QR uses that same origin. Phones must use the same server URL; room codes are scoped to a server. No permanent deployment is claimed. If SSH is blocked, try another network or trusted manual TLS. Static hosting uses a different PeerJS path and was not revalidated here.

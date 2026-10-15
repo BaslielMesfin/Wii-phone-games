@@ -33,7 +33,8 @@ export function resetRacer(r,track) {
 export function stepRacer(r,input,dt,track,time) {
  if(r.finished)input={gas:false,brake:true,steer:0};
  const n=track.samples.length, steer=clamp(Number(input.steer)||0,-1,1),gas=input.gas===true,brake=input.brake===true;
- r.steering += (steer-r.steering)*Math.min(1,dt*10);
+ // Human corrections must catch up quickly, especially when counter-steering.
+ r.steering += (steer-r.steering)*Math.min(1,dt*(r.human?30:10));
  r.offroad=nearestPoint(track,r.x,r.z,r.near).dist>track.width/2-1;
  r.drifting=gas&&brake&&Math.abs(steer)>.22&&r.speed>9&&!r.offroad;
  if(r.drifting)r.charge=clamp(r.charge+dt*.5,0,1);

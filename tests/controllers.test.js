@@ -56,11 +56,13 @@ test('Host brakes stale inputs and reconnects the same driver without stale-sock
  class Connection extends EventEmitter{constructor(){super();this.open=true;this.messages=[];}send(m){this.messages.push(m);}close(){this.open=false;this.emit('close');}}
  const first=new Connection();host.accept(first);first.emit('data',{type:'join',token:'persistent-controller',name:'Test',car:'gt'});
  const id=host.players[0].id;first.emit('data',{type:'input',gas:true,steer:2});assert.equal(host.players[0].input.steer,1);
+ first.emit('data',{type:'ping',sent:123});assert.deepEqual(first.messages.at(-1),{type:'pong',sent:123});
  host.players[0].last=performance.now()-700;host.tick();assert.deepEqual(host.players[0].input,{gas:false,brake:true,steer:0});assert.equal(host.players[0].connected,false);
  host.running=true;
  const second=new Connection();host.accept(second);second.emit('data',{type:'join',token:'persistent-controller',name:'New name',car:'club'});
  assert.equal(host.players.length,1);assert.equal(host.players[0].id,id);assert.equal(host.players[0].car,'gt');assert.equal(host.players[0].connected,true);
  first.emit('data',{type:'input',gas:true,steer:-1});assert.equal(host.players[0].input.gas,false);
+ const sent=first.messages.length;first.emit('data',{type:'ping',sent:456});assert.equal(first.messages.length,sent);
  second.emit('data',{type:'input',gas:true,steer:.5});assert.equal(host.players[0].input.gas,true);
  host.running=false;first.emit('data',{type:'profile',car:'zip',ready:true});assert.equal(host.players[0].car,'gt');
  second.emit('data',{type:'controller',status:{version:2,mode:'tilt',orientation:90,landscape:true,raw:12,zero:3,steer:5,gas:true,brake:true,motionFresh:true,gravity:{x:1,y:2,z:3}}});

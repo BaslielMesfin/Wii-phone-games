@@ -24,7 +24,8 @@ export class WheelMotion {
   const changed=this.orientation!==orientation;
   if(changed)this.calibrated=false;
   const first=this.gravity===null||changed;
-  const dt=this.sampleTime===null?0:clamp((now-this.sampleTime)/1000,0,.25),alpha=1-Math.exp(-dt/.045);
+  // One short sensor filter; adding another filter in the render loop delays turns twice.
+  const dt=this.sampleTime===null?0:clamp((now-this.sampleTime)/1000,0,.25),alpha=1-Math.exp(-dt/.018);
   this.sampleTime=now;
   this.gravity=first?{x:g.x,y:g.y,z:g.z}:Object.fromEntries(['x','y','z'].map(k=>[k,this.gravity[k]+(g[k]-this.gravity[k])*alpha]));
   this.orientation=orientation;
