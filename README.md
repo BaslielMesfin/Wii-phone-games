@@ -23,9 +23,13 @@ Keyboard: **W / Up** gas; **S / Down / Space** brake; **A D / Left Right** steer
 
 Red left half = brake; green right half = gas. Hold both while steering to drift. **Touch arrows** remain available when motion permission is unavailable. Keep the laptop tab visible and every phone unlocked. Opening controller settings, losing focus, stale motion, or stale inputs releases the accelerator; disconnected controllers brake on the host.
 
+Turn the landscape phone like a steering wheel: lower its right end to steer right, and lower its left end to steer left. Tipping the screen toward/away should not change steering. The setup panel includes a live LEFT–RIGHT preview so you can check direction before the race. Keep the screen slightly upright; a phone lying completely flat cannot measure wheel rotation from gravity. Calibration uses your current grip, and flipping landscape orientation recenters steering automatically. Gas held during the countdown begins accelerating at GO.
+
 Four phones can race together. To mix keyboard and phones, enable the laptop driver and connect up to three phones. A fifth controller is rejected. Reconnecting the same phone retains its seat; after reconnecting in the lobby, mark it ready again. Remove disconnected seats using the × beside their names.
 
-The HTTPS launcher uses an outbound SSH connection to [localhost.run](https://localhost.run/docs/http-tunnels/), which supplies TLS certificates. It starts a separate game server on `127.0.0.1:4174`, opens a temporary public address, and routes controller WebSockets through that address. It does not change router settings or install certificates. Anyone who has the invite can join; room codes are invitations, not an authentication system. Stop the launcher with Ctrl+C when finished. Free addresses expire/change and the service has no guaranteed availability. This is a play-session link, not permanent hosting.
+The HTTPS launcher uses an outbound SSH connection to [localhost.run](https://localhost.run/docs/http-tunnels/), which supplies TLS certificates. It starts the game on `127.0.0.1:4174` and opens that local laptop address; the QR points phones to the current trusted HTTPS address. If the tunnel disconnects, the laptop stays running and the launcher reconnects. The lobby temporarily hides the expired QR and refreshes it when a new address is ready. Rescan the current QR if your phone says **No tunnel**; old bookmarks may have expired. Remove old disconnected seats before rejoining if necessary. A race pauses when the phone link is lost.
+
+The launcher does not change router settings or install certificates. Anyone who has the invite can join; room codes are invitations, not an authentication system. Stop the launcher with Ctrl+C when finished. Free addresses expire/change and the service has no guaranteed availability. This is a play-session link, not permanent hosting.
 
 If `ssh.exe` is missing, install **OpenSSH Client** in Windows Optional features. If your network blocks SSH, use another network or provide trusted TLS certificates as described below. If port 4174 is occupied, set `APEX_HTTPS_PORT` before starting `node scripts/https.mjs`.
 
@@ -60,7 +64,7 @@ npm test
 npm run check
 ```
 
-19 automated tests cover all six track/car combinations completing three valid laps, car construction, braking, drift boost, lap gates, boundaries/reset, collisions, standings, HTTP-safe reconnect tokens, tilt math in both landscape orientations, calibration/inversion, four-controller relay capacity, message isolation, Origin checks, reconnect identity, and stale-input braking.
+29 automated tests cover all six track/car combinations completing three valid laps, car construction, braking, drift boost, lap gates, boundaries/reset, collisions, standings, HTTP-safe reconnect tokens, tilt math in both landscape orientations and different grip inclinations, calibration/inversion, browser sensor getters, independent pedal pointers, countdown holds, four-controller relay capacity, message isolation, Origin checks, reconnect identity, stale-input braking, and tunnel address renewal/chunk parsing.
 
 On Windows, browser inspection confirmed both circuits and all three models in four-player split-screen, four independent controller pages joining/readying, phone pedal input reaching the host, keyboard acceleration/braking, pause, and changing tracks. Browser controllers simulate phones; they are not four physical devices.
 

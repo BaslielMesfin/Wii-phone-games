@@ -11,12 +11,17 @@ const args=process.argv.slice(2),value=(key,fallback)=>{const i=args.indexOf(key
 const port=Number(value('--port','4173')),hostname=value('--host','0.0.0.0');
 if(!Number.isInteger(port)||port<1||port>65535)throw Error('Port must be a number between 1 and 65535.');
 const cert=value('--cert',null),key=value('--key',null),secure=!!(cert&&key);
+const publicOriginFile=value('--public-origin-file',null);
 let addresses=[];
 try{addresses=Object.values(networkInterfaces()).flat().filter(n=>n.family==='IPv4'&&!n.internal).map(n=>n.address);}catch{console.warn('LAN address discovery unavailable; use localhost for keyboard play.');}
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.woff2':'font/woff2','.txt':'text/plain; charset=utf-8'};
 async function handler(req,res){
  try{const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
-  if(pathname==='/api/config'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({transport:'local',controllerOrigin:process.env.APEX_PUBLIC_ORIGIN||(addresses.length?`${secure?'https':'http'}://${addresses[0]}:${port}`:null),secure}));return;}
+  if(pathname==='/api/config'){
+   let controllerOrigin=process.env.APEX_PUBLIC_ORIGIN||(addresses.length?`${secure?'https':'http'}://${addresses[0]}:${port}`:null),tunnelState=null;
+   if(publicOriginFile){let state;try{state=JSON.parse(await readFile(publicOriginFile,'utf8'));}catch{}controllerOrigin=state?.status==='ready'?state.origin:null;tunnelState=state?.status||'connecting';}
+   res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');res.end(JSON.stringify({transport:'local',controllerOrigin,secure,tunnelState}));return;
+  }
   if(!['GET','HEAD'].includes(req.method)){res.writeHead(405);res.end('Method not allowed');return;}
   const allowed=pathname==='/'||pathname==='/index.html'||pathname==='/src/style.css'||/^\/src\/[a-z-]+\.js$/.test(pathname)||pathname.startsWith('/vendor/');
   if(!allowed){res.writeHead(404);res.end('Not found');return;}

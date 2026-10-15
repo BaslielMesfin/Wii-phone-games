@@ -9,9 +9,9 @@ import {attachRelay} from '../scripts/relay.mjs';
 import {wheelAngle,wheelSteer} from '../src/motion.js';
 
 test('Tilt maps both landscape orientations, calibration, inversion, and missing sensors',()=>{
- const g={x:0,y:-4.905,z:8.4957};
+ const g={x:-8.4957,y:-4.905,z:0};
  assert.ok(Math.abs(wheelAngle(g,90)-30)<.01);
- assert.ok(Math.abs(wheelAngle(g,270)+30)<.01);
+ assert.ok(Math.abs(wheelAngle({x:8.4957,y:4.905,z:0},270)-30)<.01);
  assert.equal(wheelAngle({x:null,y:0,z:9.8}),null);
  assert.equal(wheelAngle({x:0,y:0,z:0}),null);
  assert.equal(wheelSteer(25,25,30),0);
@@ -63,5 +63,8 @@ test('Host brakes stale inputs and reconnects the same driver without stale-sock
  first.emit('data',{type:'input',gas:true,steer:-1});assert.equal(host.players[0].input.gas,false);
  second.emit('data',{type:'input',gas:true,steer:.5});assert.equal(host.players[0].input.gas,true);
  host.running=false;first.emit('data',{type:'profile',car:'zip',ready:true});assert.equal(host.players[0].car,'gt');
+ second.emit('data',{type:'controller',status:{version:2,mode:'tilt',orientation:90,landscape:true,raw:12,zero:3,steer:5,gas:true,brake:true,motionFresh:true,gravity:{x:1,y:2,z:3}}});
+ assert.equal(host.players[0].controller.orientation,90);assert.equal(host.players[0].controller.steer,1);assert.equal(host.players[0].controller.brake,true);
+ first.emit('data',{type:'controller',status:{orientation:0}});assert.equal(host.players[0].controller.orientation,90);
  second.close();assert.equal(host.players[0].connected,false);assert.equal(host.players[0].input.brake,true);
 });

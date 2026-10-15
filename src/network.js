@@ -20,6 +20,11 @@ export class HostRoom {
     player.conn?.close();player.conn=conn;player.connected=true;player.last=performance.now();clearTimeout(timeout);conn.send({type:'welcome',id:player.id,name:player.name});this.callbacks.change?.();
    } else if(player&&data.type==='input'){
     if(player.conn!==conn)return;const wasConnected=player.connected;player.last=performance.now();player.connected=true;player.input={gas:data.gas===true,brake:data.brake===true,steer:clamp(Number(data.steer)||0,-1,1),reset:data.reset===true};if(!wasConnected)this.callbacks.change?.();
+   } else if(player&&player.conn===conn&&data.type==='controller'){
+    const d=data.status;if(!d||typeof d!=='object')return;
+    const number=n=>Number.isFinite(n)?n:null;
+    player.controller={version:number(d.version),mode:d.mode==='touch'?'touch':'tilt',orientation:number(d.orientation),landscape:d.landscape===true,raw:number(d.raw),zero:number(d.zero),gravity:d.gravity?{x:number(d.gravity.x),y:number(d.gravity.y),z:number(d.gravity.z)}:null,motionFresh:d.motionFresh===true,steer:clamp(Number(d.steer)||0,-1,1),gas:d.gas===true,brake:d.brake===true,screen:String(d.screen||'').slice(0,16)};
+    this.callbacks.controller?.();
    } else if(player&&player.conn===conn&&data.type==='profile'&&!this.running){player.car=['club','zip','gt'].includes(data.car)?data.car:player.car;player.ready=data.ready===true;this.callbacks.change?.();}
   });
   conn.on('close',()=>{clearTimeout(timeout);if(player?.conn===conn){player.connected=false;player.ready=false;player.input={gas:false,brake:true,steer:0};this.callbacks.change?.();}});
@@ -37,6 +42,7 @@ export class PhoneConnection {
   c.on('data',d=>{if(d?.type==='reject'){this.stopped=true;this.callbacks.error?.(d.message);c.close();}else if(d?.type==='welcome'){this.id=d.id;this.callbacks.status?.('Connected');this.callbacks.welcome?.(d);}else this.callbacks.data?.(d);});
   c.on('close',()=>{clearTimeout(timeout);if(this.stopped)return;this.callbacks.status?.('Reconnecting…');this.retry=setTimeout(()=>this.connect(),1800);});c.on('error',()=>this.callbacks.error?.('Connection interrupted. Keep both screens open.'));
  }
+ sendDiagnostics(status){if(this.conn?.open)this.conn.send({type:'controller',status});}
  profileUpdate(car,ready){this.profile.car=car;this.profile.ready=ready;if(this.conn?.open)this.conn.send({type:'profile',car,ready});}
  destroy(){this.stopped=true;clearTimeout(this.retry);clearInterval(this.timer);this.conn?.close();this.peer.destroy();}
 }

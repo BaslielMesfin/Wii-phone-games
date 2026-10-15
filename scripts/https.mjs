@@ -1,42 +1,42 @@
 import {spawn,execFile} from 'node:child_process';
-import {mkdir} from 'node:fs/promises';
+import {mkdirSync,writeFileSync,renameSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {resolve,dirname} from 'node:path';
-const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
-const tools=resolve(root,'.tools');await mkdir(tools,{recursive:true});
-const port=process.env.APEX_HTTPS_PORT||'4174';
+import {TunnelOutput} from './tunnel-state.mjs';
+const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),tools=resolve(root,'.tools');mkdirSync(tools,{recursive:true});
+const stateFile=resolve(tools,'public-origin.json'),port=process.env.APEX_HTTPS_PORT||'4174';
 if(!/^\d+$/.test(port)||Number(port)<1||Number(port)>65535)throw Error('APEX_HTTPS_PORT must be between 1 and 65535.');
-console.log('Opening a temporary public HTTPS address for APEX Pocket using localhost.run.');
-console.log('Anyone with your room invite can join. Keep this window open while playing.');
-const args=['-4','-T','-F','none','-o','BatchMode=yes','-o','IdentityFile=none','-o','IdentitiesOnly=yes','-o','IdentityAgent=none','-o','StrictHostKeyChecking=accept-new','-o',`UserKnownHostsFile=${resolve(tools,'known_hosts')}`,'-o','ConnectTimeout=20','-o','ServerAliveInterval=30','-o','ServerAliveCountMax=6','-o','ExitOnForwardFailure=yes','-R',`80:127.0.0.1:${port}`,'nokey@localhost.run','--','--output','json'];
-const tunnel=spawn(process.platform==='win32'?'ssh.exe':'ssh',args,{cwd:root,windowsHide:true,stdio:['ignore','pipe','pipe']});
-let game,started=false,output='';
-const cleanup=()=>{game?.kill();tunnel.kill();};
-process.on('SIGINT',()=>{cleanup();process.exit();});process.on('SIGTERM',()=>{cleanup();process.exit();});process.on('exit',cleanup);
-const deadline=setTimeout(()=>{console.error('HTTPS connection timed out. Check internet access or try another network.');cleanup();process.exitCode=1;},90000);
-function read(chunk){
- output+=chunk.toString();
- let end;while((end=output.indexOf('\n'))!==-1){
-  const line=output.slice(0,end).trim();output=output.slice(end+1);
-  let event;try{event=JSON.parse(line);}catch{if(/^(?:ssh:|Permission denied|Error:|Timeout)|Connection (?:closed|timed out|reset)/i.test(line))console.error(line);continue;}
-  if(event.type!=='v1.tcpip_forward.register.accepted'||started)continue;
-  const url=typeof event.data==='string'?event.data.match(/https:\/\/[a-z0-9-]+\.(?:lhr\.life|localhost\.run)/i)?.[0]:null;
-  if(!url)continue;
-  started=true;clearTimeout(deadline);
-  game=spawn(process.execPath,['server.mjs','--host','127.0.0.1','--port',port],{cwd:root,windowsHide:true,env:{...process.env,APEX_PUBLIC_ORIGIN:url},stdio:['ignore','pipe','inherit']});
-  game.stdout.on('data',data=>{if(data.toString().includes('Laptop:')){
-   console.log(`\nAPEX Pocket — HTTPS ready\nOpen on laptop: ${url}\nCreate a race, then scan its QR with up to four phones.\nKeep this window open. Ctrl+C stops both game and HTTPS link.\n`);
-   if(!process.argv.includes('--no-open')){
-    if(process.platform==='win32')execFile('cmd',['/c','start','',url],()=>{});
-    else if(process.platform==='darwin')execFile('open',[url],()=>{});
-    else execFile('xdg-open',[url],()=>{});
-   }
-  }});
-  game.on('error',e=>{console.error(e.message);cleanup();process.exitCode=1;});
-  game.on('exit',code=>{if(code){console.error('Game server failed.');tunnel.kill();process.exitCode=code;}});
- }
- if(output.length>65536)output='';
+let tunnel,game,retry,deadline,stopping=false,currentOrigin=null,opened=false,attempt=0;
+function save(origin,status){const temp=stateFile+'.tmp';writeFileSync(temp,JSON.stringify({origin,status,pid:tunnel?.pid||null,updatedAt:new Date().toISOString()}));renameSync(temp,stateFile);}
+function cleanup(){stopping=true;clearTimeout(retry);clearTimeout(deadline);save(null,'stopped');tunnel?.kill();game?.kill();}
+process.on('SIGINT',()=>{cleanup();process.exit();});process.on('SIGTERM',()=>{cleanup();process.exit();});process.on('exit',()=>{if(!stopping)cleanup();});
+function openBrowser(url){if(process.argv.includes('--no-open'))return;if(process.platform==='win32')execFile('cmd',['/c','start','',url],()=>{});else execFile(process.platform==='darwin'?'open':'xdg-open',[url],()=>{});}
+function startTunnel(){
+ if(stopping)return;
+ currentOrigin=null;save(null,'connecting');console.log('Connecting phone HTTPS link…');
+ const args=['-4','-T','-F','none','-o','BatchMode=yes','-o','IdentityFile=none','-o','IdentitiesOnly=yes','-o','IdentityAgent=none','-o','StrictHostKeyChecking=accept-new','-o',`UserKnownHostsFile=${resolve(tools,'known_hosts')}`,'-o','ConnectTimeout=20','-o','ServerAliveInterval=30','-o','ServerAliveCountMax=6','-o','ExitOnForwardFailure=yes','-R',`80:127.0.0.1:${port}`,'nokey@localhost.run','--','--output','json'];
+ const child=spawn(process.platform==='win32'?'ssh.exe':'ssh',args,{cwd:root,windowsHide:true,stdio:['ignore','pipe','pipe']});tunnel=child;
+ const ready=origin=>{
+  if(stopping||tunnel!==child||origin===currentOrigin)return;
+  const changed=currentOrigin!==null;currentOrigin=origin;attempt=0;clearTimeout(deadline);save(origin,'ready');
+  console.log(`\n${changed?'Phone link renewed':'Phone HTTPS ready'}: ${origin}\nLaptop: http://localhost:${port}\nScan the CURRENT laptop QR. Keep this window open. Ctrl+C stops the game.\n`);
+  if(!opened){opened=true;openBrowser(`http://localhost:${port}`);}
+ };
+ // Keep stdout/stderr chunk buffers separate; either stream may contain events.
+ const stdout=new TunnelOutput(ready,m=>console.error(m)),stderr=new TunnelOutput(ready,m=>console.error(m));
+ child.stdout.on('data',chunk=>stdout.push(chunk));child.stderr.on('data',chunk=>stderr.push(chunk));
+ deadline=setTimeout(()=>{console.error('Phone link timed out; retrying. The laptop game stays open.');child.kill();},90000);
+ child.on('error',e=>{console.error(e.message);if(e.code==='ENOENT'){console.error('Install Windows OpenSSH Client (Optional features).');cleanup();process.exitCode=1;}});
+ child.on('close',()=>{
+  clearTimeout(deadline);if(stopping||tunnel!==child)return;
+  currentOrigin=null;save(null,'connecting');console.log('Phone link disconnected. Reconnecting; watch the laptop for the updated QR.');
+  retry=setTimeout(startTunnel,Math.min(15000,2000*2**Math.min(attempt++,3)));
+ });
 }
-tunnel.stdout.on('data',read);tunnel.stderr.on('data',read);
-tunnel.on('error',e=>{clearTimeout(deadline);console.error(`${e.message}\nInstall Windows OpenSSH Client (Optional features) if ssh.exe is missing.`);process.exitCode=1;});
-tunnel.on('exit',code=>{clearTimeout(deadline);game?.kill();console.log(`HTTPS link closed (SSH exit ${code}). Relaunch START-PHONE-HTTPS.bat for a new address.`);if(code)process.exitCode=code;});
+save(null,'connecting');
+console.log('APEX Pocket: local game + temporary public phone HTTPS link. Anyone with the room invite can join.');
+game=spawn(process.execPath,['server.mjs','--host','127.0.0.1','--port',port,'--public-origin-file',stateFile],{cwd:root,windowsHide:true,stdio:['ignore','pipe','inherit']});
+let serverOutput='',serverReady=false;
+game.stdout.on('data',chunk=>{serverOutput=(serverOutput+chunk.toString()).slice(-4000);if(!serverReady&&serverOutput.includes('Laptop:')){serverReady=true;console.log(`Laptop game: http://localhost:${port}`);startTunnel();}});
+game.on('error',e=>{console.error(e.message);cleanup();process.exitCode=1;});
+game.on('close',code=>{if(!stopping){console.error('Game server stopped.');cleanup();process.exitCode=code||1;}});
